@@ -5,7 +5,8 @@ from Params import NWIRES
 hit_dtype = np.dtype([
     ('bx', np.int16),
     ('tdc', np.int16),
-    ('label', np.int8)
+    ('label', np.int8),
+    ('signal', np.bool_)
 ])
 
 gen_event_dtype = np.dtype([
@@ -15,14 +16,13 @@ gen_event_dtype = np.dtype([
     ('angle', np.float16),
     ('x0', np.float16),
     ('n_true_hits', np.int8),
-    ('n_hits', np.int8),
-    ('signal', np.bool_)
+    ('n_hits', np.int8)
 ])
 
 
 
 # fill event structure
-def hits_to_numpy(event, muon_hits, signal_type):
+def hits_to_numpy(event, muon_hits):
     for hit in muon_hits:
         layer, wire = hit['layer']-1, hit['wire_num']-1
 
@@ -30,6 +30,7 @@ def hits_to_numpy(event, muon_hits, signal_type):
         curr_mc['bx'][layer, wire] = hit['bx']
         curr_mc['tdc'][layer, wire] = hit['tdc']
         curr_mc['label'][layer, wire] = hit['label']
+        curr_mc['signal'][layer, wire] = hit['signal']
 
     event['t0'] = muon_hits[0]['t0']
     event['angle'] = muon_hits[0]['psi']
@@ -37,7 +38,6 @@ def hits_to_numpy(event, muon_hits, signal_type):
 
     event['n_hits'] = np.count_nonzero(event['mc']['bx']!=-1)
     event['n_true_hits'] = np.count_nonzero(event['mc']['label']!=0)
-    event['signal'] = signal_type
 
 
 # get hits list from event
@@ -57,7 +57,8 @@ def numpy_to_hits(event):
             'label': curr_mc['label'][l,w],
             't0': event['t0'],
             'psi': event['angle'],
-            'x0': event['x0']
+            'x0': event['x0'],
+            'signal': event['signal']
         })
 
     return muon_hits
