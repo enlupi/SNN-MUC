@@ -138,14 +138,19 @@ def generate_clean_evts(num_events, bx0=500):
     events_arr_no_noise['mc']['tdc'] = -1
 
     muon_list = []
+    max_n_hit = 0
     for ev_id in tqdm.tqdm(range(num_events)):
         muon_hits, pattern, num_muon_hits, num_hits = get_event(bx0)
 
         events_arr_no_noise[ev_id]['id'] = ev_id
         hits_to_numpy(events_arr_no_noise[ev_id], muon_hits)
+
         muon_list.append(muon_hits)
 
-    return events_arr_no_noise, muon_list
+        if len(muon_hits) > max_n_hit:
+            max_n_hit = len(muon_hits)
+
+    return events_arr_no_noise, muon_list, max_n_hit
 
 
 # GENERATE NOISY EVENTS
@@ -265,14 +270,18 @@ def generate_noisy_evts(num_events, bx0=500, noise_frac=0.1, bkg_frac=0.5):
     events_arr['mc']['tdc'] = -1
 
     muon_list = []
+    max_n_hit = 0
     for ev_id in tqdm.tqdm(range(num_events)):
         muon_hits, pattern, num_muon_hits, num_hits = get_event_noise(bx0, noise_frac=noise_frac, bkg_frac=bkg_frac)
 
         events_arr[ev_id]['id'] = ev_id
         hits_to_numpy(events_arr[ev_id], muon_hits)
         muon_list.append(muon_hits)
+        
+        if len(muon_hits) > max_n_hit:
+            max_n_hit = len(muon_hits)
 
-    return events_arr, muon_list
+    return events_arr, muon_list, max_n_hit
 
 
 
