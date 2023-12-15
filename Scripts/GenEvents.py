@@ -91,6 +91,7 @@ def generate_muon(bx0, useIdealEF=False):
             't0': bx0+tdc0/30,
             'psi': psi,
             'x0': entry_point,
+            'signal': True
         })
 
     # get expected eq label
@@ -127,10 +128,7 @@ def get_event(bx0):
     # add noise
     num_hits = len(muon_hits)
 
-    # signal label
-    signal_type = True
-
-    return muon_hits, gen_pattern, num_muon_hits, num_hits, signal_type
+    return muon_hits, gen_pattern, num_muon_hits, num_hits
 
 
 def generate_clean_evts(num_events, bx0=500):
@@ -139,13 +137,15 @@ def generate_clean_evts(num_events, bx0=500):
     events_arr_no_noise['mc']['bx'] = -1
     events_arr_no_noise['mc']['tdc'] = -1
 
+    muon_list = []
     for ev_id in tqdm.tqdm(range(num_events)):
-        muon_hits, pattern, num_muon_hits, num_hits, signal = get_event(bx0)
+        muon_hits, pattern, num_muon_hits, num_hits = get_event(bx0)
 
         events_arr_no_noise[ev_id]['id'] = ev_id
-        hits_to_numpy(events_arr_no_noise[ev_id], muon_hits, signal)
+        hits_to_numpy(events_arr_no_noise[ev_id], muon_hits)
+        muon_list.append(muon_hits)
 
-    return events_arr_no_noise
+    return events_arr_no_noise, muon_list
 
 
 # GENERATE NOISY EVENTS
@@ -171,6 +171,10 @@ def get_event_noise(bx0, noise_frac=0, bkg_frac=0.2):
                     valid_event_flag = True
                     num_muon_hits = len(muon_hits)
 
+        t0 = muon_hits[0]['t0']
+        angle = muon_hits[0]['psi']
+        x0 = muon_hits[0]['x0']
+
         # simulate cell inefficiency
         dead_cells = binom.rvs(num_muon_hits, cell_ineff) #if (num_muon_hits==NLAYERS) and (np.random.rand()<=0.2):
         for i in range(dead_cells):
@@ -178,12 +182,9 @@ def get_event_noise(bx0, noise_frac=0, bkg_frac=0.2):
             _ = muon_hits.pop(np.random.randint(len(muon_hits)))
 
         # add noise
-        if np.random.rand()<noise_frac:
+        if np.random.rand() < noise_frac:
             # number of noise hits
             n_noise = np.random.choice([1,2,3,4], p=[0.45,0.3,0.2,0.05])
-            t0 = muon_hits[0]['t0']
-            angle = muon_hits[0]['psi']
-            x0 = muon_hits[0]['x0']
             for _ in range(n_noise):
                 layer,wire_num = np.random.randint(1,NLAYERS+1), np.random.randint(1,NWIRES+1)
                 #bx = bx0+np.random.randint(-10,20)
@@ -219,17 +220,15 @@ def get_event_noise(bx0, noise_frac=0, bkg_frac=0.2):
                         'label': label,
                         't0': t0,
                         'psi': angle,
-                        'x0': x0
+                        'x0': x0,
+                        'signal': False
                     })
-
-        # signal label
-        signal_type = True
 
     # simulate noise
     else:
         muon_hits = []
         num_muon_hits = 0
-        n_noise = np.random.choice([1,2,3,4], p=[0.45,0.40,0.1,0.05])
+        n_noise = np.random.choice([1,2,3,4], p=[0.45,0.3,0.2,0.05])
         for _ in range(n_noise):
             layer,wire_num = np.random.randint(1,NLAYERS+1), np.random.randint(1,NWIRES+1)
             t0 = bx0
@@ -247,18 +246,16 @@ def get_event_noise(bx0, noise_frac=0, bkg_frac=0.2):
                 'label': label,
                 't0': t0,
                 'psi': angle,
-                'x0': x0
+                'x0': x0,
+                'signal': False
             })
-
-        # signal label
-        signal_type = False
 
     # shuffle list
     rnd.shuffle(muon_hits)
 
     num_hits = len(muon_hits)
 
-    return muon_hits, gen_pattern, num_muon_hits, num_hits, signal_type
+    return muon_hits, gen_pattern, num_muon_hits, num_hits
 
 
 def generate_noisy_evts(num_events, bx0=500, noise_frac=0.1, bkg_frac=0.5):
@@ -267,13 +264,15 @@ def generate_noisy_evts(num_events, bx0=500, noise_frac=0.1, bkg_frac=0.5):
     events_arr['mc']['bx'] = -1
     events_arr['mc']['tdc'] = -1
 
+    muon_list = []
     for ev_id in tqdm.tqdm(range(num_events)):
-        muon_hits, pattern, num_muon_hits, num_hits, signal = get_event_noise(bx0, noise_frac=noise_frac, bkg_frac=bkg_frac)
+        muon_hits, pattern, num_muon_hits, num_hits = get_event_noise(bx0, noise_frac=noise_frac, bkg_frac=bkg_frac)
 
         events_arr[ev_id]['id'] = ev_id
-        hits_to_numpy(events_arr[ev_id], muon_hits, signal)
+        hits_to_numpy(events_arr[ev_id], muon_hits)
+        muon_list.append(muon_hits)
 
-    return events_arr
+    return events_arr, muon_list
 
 
 
