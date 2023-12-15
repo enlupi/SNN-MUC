@@ -25,8 +25,8 @@ VDRIFTMMBX = XCELL*0.5 / TM       # drift velocity in mm/BX
 VHRATIO    = XCELL*0.5/TM/ZCELL
 
 ## number of cells
-NLAYERS = 8 # number of layers
-NWIRES  = 8 # numbers of cells per layer
+NLAYERS = 4 # number of layers
+NWIRES  = 4 # numbers of cells per layer
 # Starting from a single cell, new columns are added alternating on the right and on the left,
 # while new rows are added alternating on the bottom and on the top
 
