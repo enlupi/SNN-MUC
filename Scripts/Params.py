@@ -44,4 +44,6 @@ SIDE_MAP = {-1:'L',1:'R'}
 LAYER_MAP = [-99] + [i-1 for i in range(NLAYERS, 0, -1)]
 
 
+# noise parameters
+bx_oot = 10
 cell_ineff = 0.06
