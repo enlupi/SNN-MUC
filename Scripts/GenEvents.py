@@ -3,8 +3,8 @@ import numpy as np
 import math
 import tqdm
 from scipy.stats import binom
-from Params import *
-from EventData import *
+import Params as ps 
+import EventData as ed
 
 
 def correct_hit(psi, dx):
@@ -32,8 +32,8 @@ def generate_muon(bx0, useIdealEF=False):
     angle = rnd.uniform(math.pi*1./4., math.pi*3./4.)
 
     m = math.tan(angle)
-    xmin = -(1+(NWIRES-1)//2)*XCELL
-    xmax = (0.5+NWIRES//2)*XCELL
+    xmin = -(1+(ps.NWIRES-1)//2)*ps.XCELL
+    xmax = (0.5+ps.NWIRES//2)*ps.XCELL
     entry_point = rnd.uniform(xmin, xmax)
     q = - m*entry_point
 
@@ -44,20 +44,20 @@ def generate_muon(bx0, useIdealEF=False):
     wire_pattern = ''
     side_pattern = ''
 
-    for l in range(NLAYERS):
-        x = (pos_shift_z[l] - q)/m
+    for l in range(ps.NLAYERS):
+        x = (ps.pos_shift_z[l] - q)/m
 
         # apply smearing
         x += 0.25*np.random.randn()
 
         # find the wire
-        nw = math.floor((x-xmin-is_shifted_right[l]*0.5*XCELL)/XCELL)+1
+        nw = math.floor((x-xmin-ps.is_shifted_right[l]*0.5*ps.XCELL)/ps.XCELL)+1
 
         # remove hits outside the macrocell
-        if nw < 1 or nw > NWIRES: continue
+        if nw < 1 or nw > ps.NWIRES: continue
 
         # find the distance from the wire
-        dx = x - xmin - (is_shifted_right[l]+1)*0.5*XCELL - (nw-1)*XCELL
+        dx = x - xmin - (ps.is_shifted_right[l]+1)*0.5*ps.XCELL - (nw-1)*ps.XCELL
 
         # remove hits in the I
         if abs(dx) >= (21 - 1.4/2):
@@ -65,22 +65,22 @@ def generate_muon(bx0, useIdealEF=False):
 
         ## apply EF dishomogeneity
         # drift time
-        t = abs(dx) / VDRIFT
+        t = abs(dx) / ps.VDRIFT
 
         if not useIdealEF:
             t -= 19.79*math.pow(math.tan(psi),2)
             t += correct_hit(abs(psi), abs(dx))
 
         # compute BX and TDC
-        bx = t // DURATION['bx']
-        dt = t % DURATION['bx']
+        bx = t // ps.DURATION['bx']
+        dt = t % ps.DURATION['bx']
 
 
-        tdc_meas = (int(np.floor(dt/DURATION['tdc'])) + tdc0) % 30
-        bx_counter = int(bx0 + bx) + (int(np.floor(dt/DURATION['tdc'])) + tdc0)//30
+        tdc_meas = (int(np.floor(dt/ps.DURATION['tdc'])) + tdc0) % 30
+        bx_counter = int(bx0 + bx) + (int(np.floor(dt/ps.DURATION['tdc'])) + tdc0)//30
 
-        wire_pattern += f"{l+1}{WIRE_MAP[nw]}"
-        side_pattern += f"{SIDE_MAP[1 if dx>0 else -1]}"
+        wire_pattern += f"{l+1}{ps.WIRE_MAP[nw]}"
+        side_pattern += f"{ps.SIDE_MAP[1 if dx>0 else -1]}"
 
         muon_hits.append({
             'layer': l + 1,
@@ -119,7 +119,7 @@ def get_event(bx0):
     num_muon_hits = 0
     while not valid_event_flag:
         muon_hits, gen_pattern = generate_muon(bx0)
-        if len(muon_hits) >= (NLAYERS-1):
+        if len(muon_hits) >= (ps.NLAYERS-1):
             lat = gen_pattern.split('-')[1]
             if lat.find('LLL') == -1 and lat.find('RRR') == -1:
                 valid_event_flag = True
@@ -132,7 +132,7 @@ def get_event(bx0):
 
 
 def generate_clean_evts(num_events, bx0=500):
-    events_arr_no_noise = np.zeros(num_events, dtype=gen_event_dtype)
+    events_arr_no_noise = np.zeros(num_events, dtype=ed.gen_event_dtype)
     # initialize array
     events_arr_no_noise['mc']['bx'] = -1
     events_arr_no_noise['mc']['tdc'] = -1
@@ -143,7 +143,7 @@ def generate_clean_evts(num_events, bx0=500):
         muon_hits, pattern, num_muon_hits, num_hits = get_event(bx0)
 
         events_arr_no_noise[ev_id]['id'] = ev_id
-        hits_to_numpy(events_arr_no_noise[ev_id], muon_hits)
+        ed.hits_to_numpy(events_arr_no_noise[ev_id], muon_hits)
 
         muon_list.append(muon_hits)
 
@@ -155,8 +155,7 @@ def generate_clean_evts(num_events, bx0=500):
 
 # GENERATE NOISY EVENTS
 
-bx_oot = 10
-def noise_distributions(bx0=500, bx_oot=bx_oot):
+def noise_distributions(bx0=500, bx_oot=ps.bx_oot):
     return np.concatenate([
                 np.random.triangular(bx0-bx_oot, bx0, bx0,10000),
                 np.random.uniform(bx0,bx0+16,30000),
@@ -170,7 +169,7 @@ def get_event_noise(bx0, noise_frac=0, bkg_frac=0.2):
         num_muon_hits = 0
         while not valid_event_flag:
             muon_hits, gen_pattern = generate_muon(bx0)
-            if len(muon_hits) >= (NLAYERS-1):
+            if len(muon_hits) >= (ps.NLAYERS-1):
                 lat = gen_pattern.split('-')[1]
                 if lat.find('LLL') == -1 and lat.find('RRR') == -1:
                     valid_event_flag = True
@@ -181,7 +180,7 @@ def get_event_noise(bx0, noise_frac=0, bkg_frac=0.2):
         x0 = muon_hits[0]['x0']
 
         # simulate cell inefficiency
-        dead_cells = binom.rvs(num_muon_hits, cell_ineff) #if (num_muon_hits==NLAYERS) and (np.random.rand()<=0.2):
+        dead_cells = binom.rvs(num_muon_hits, ps.cell_ineff) #if (num_muon_hits==NLAYERS) and (np.random.rand()<=0.2):
         for i in range(dead_cells):
             # remove one hit
             _ = muon_hits.pop(np.random.randint(len(muon_hits)))
@@ -191,7 +190,7 @@ def get_event_noise(bx0, noise_frac=0, bkg_frac=0.2):
             # number of noise hits
             n_noise = np.random.choice([1,2,3,4], p=[0.45,0.3,0.2,0.05])
             for _ in range(n_noise):
-                layer,wire_num = np.random.randint(1,NLAYERS+1), np.random.randint(1,NWIRES+1)
+                layer,wire_num = np.random.randint(1,ps.NLAYERS+1), np.random.randint(1,ps.NWIRES+1)
                 #bx = bx0+np.random.randint(-10,20)
                 bx = round(np.random.choice(noise_distributions(bx0), 1)[0])
                 tdc = np.random.randint(0,31)
@@ -235,7 +234,7 @@ def get_event_noise(bx0, noise_frac=0, bkg_frac=0.2):
         num_muon_hits = 0
         n_noise = np.random.choice([1,2,3,4], p=[0.45,0.3,0.2,0.05])
         for _ in range(n_noise):
-            layer,wire_num = np.random.randint(1,NLAYERS+1), np.random.randint(1,NWIRES+1)
+            layer,wire_num = np.random.randint(1,ps.NLAYERS+1), np.random.randint(1,ps.NWIRES+1)
             t0 = bx0
             angle = -9
             x0 = -9
@@ -264,7 +263,7 @@ def get_event_noise(bx0, noise_frac=0, bkg_frac=0.2):
 
 
 def generate_noisy_evts(num_events, bx0=500, noise_frac=0.1, bkg_frac=0.5):
-    events_arr = np.zeros(num_events, dtype=gen_event_dtype)
+    events_arr = np.zeros(num_events, dtype=ed.gen_event_dtype)
     # initialize array
     events_arr['mc']['bx'] = -1
     events_arr['mc']['tdc'] = -1
@@ -275,7 +274,7 @@ def generate_noisy_evts(num_events, bx0=500, noise_frac=0.1, bkg_frac=0.5):
         muon_hits, pattern, num_muon_hits, num_hits = get_event_noise(bx0, noise_frac=noise_frac, bkg_frac=bkg_frac)
 
         events_arr[ev_id]['id'] = ev_id
-        hits_to_numpy(events_arr[ev_id], muon_hits)
+        ed.hits_to_numpy(events_arr[ev_id], muon_hits)
         muon_list.append(muon_hits)
         
         if len(muon_hits) > max_n_hit:
@@ -287,7 +286,7 @@ def generate_noisy_evts(num_events, bx0=500, noise_frac=0.1, bkg_frac=0.5):
 
 # EVENT TIMING
 
-def get_timebox(events_arr, nhits=[NLAYERS-1,NLAYERS]):
+def get_timebox(events_arr, nhits=[ps.NLAYERS-1,ps.NLAYERS]):
     curr_events = events_arr[np.isin(events_arr['n_true_hits'], nhits)]
     idxs = np.where((curr_events['mc']['bx']!=0))
     a = (curr_events['mc']['bx']+curr_events['mc']['tdc']/30)
