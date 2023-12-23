@@ -180,8 +180,9 @@ def get_event_noise(bx0, noise_frac=0, bkg_frac=0.2):
         x0 = muon_hits[0]['x0']
 
         # simulate cell inefficiency
-        dead_cells = binom.rvs(num_muon_hits, ps.cell_ineff) #if (num_muon_hits==NLAYERS) and (np.random.rand()<=0.2):
-        for i in range(dead_cells):
+        if (num_muon_hits==ps.NLAYERS) and (np.random.rand()<=0.2):
+        #dead_cells = binom.rvs(num_muon_hits, ps.cell_ineff) 
+        #for i in range(dead_cells):
             # remove one hit
             _ = muon_hits.pop(np.random.randint(len(muon_hits)))
 
