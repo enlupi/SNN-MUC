@@ -55,10 +55,10 @@ def numpy_to_hits(event):
             'bx': curr_mc['bx'][l, w],
             'tdc': curr_mc['tdc'][l, w],
             'label': curr_mc['label'][l,w],
+            'signal': curr_mc['signal'][l,w],
             't0': event['t0'],
             'psi': event['angle'],
-            'x0': event['x0'],
-            'signal': event['signal']
+            'x0': event['x0']
         })
 
     return muon_hits
